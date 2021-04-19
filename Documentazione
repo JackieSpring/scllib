@@ -1,0 +1,141 @@
+
+=============================================================
+### scllib ### 
+@version 1.0.0
+=============================================================
+
+Libreria per la gestione di semplici linked list.
+Testata su:
+Windows 10, gcc 5.1.0
+
+
+[ CREAZIONE DELLE LISTE ]
+==============================================================
+( DEFINIZIONE DEL TIPO )
+--------------------------------------------------------------
+scllib permette di definire linked list tramite l'utilizzo
+della macro `DEFINE_SCL_TYPE(type, name)`, a seguito della
+chiamata verrà definito un nuovo tipo di struttura denominato
+`scl_<name>` che conterrà dati del tipo inserito; Ex:
+
+    #include "scllib.h"
+
+    DEFINE_SCL_TYPE(int, myscl);
+
+Il codice precedente è equivalente a:
+
+    struct scl_myscl {         
+        int info;            
+        struct scl_myscl * next;      
+    };                          
+    typedef struct scl_myscl scl_myscl;
+
+Non c'è limite al tipo di liste definibili, ma non è consentito
+definire liste con lo stesso nome.
+
+    DEFINE_SCL_TYPE(int, myscl);
+    DEFINE_SCL_TYPE(unsigned long, longlist);
+    DEFINE_SCL_TYPE(long double, pippo);
+    DEFINE_SCL_TYPE(short, pippo);  // X   NO
+
+Insieme al tipo della lista, verranno dichiarate delle funzioni
+per interagire con quel particolare tipo; le funzioni verranno
+discusse nel dettaglio nelle prossime sezioni.
+
+( CREAZIONE DELLA LISTA )
+--------------------------------------------------------------
+Ora che è stato definito il tipo, possiamo procedere alla
+creazione dei nodi, cio è possibile sia per via tradizionale
+utilizzando le funzionalità standard di C, che tramite funzioni
+apposite fornite dalla libreria:
+
+// tramite la libreria standard
+    DEFINE_SCL_TYPE(long double, pippo);
+
+    scl_pippo * nuovo_pippo = malloc(sizeof(scl_pippo));
+    nuovo_pippo->info = 555.666;
+    ...
+
+// tramite funzioni di scllib.h
+    DEFINE_SCL_TYPE(long double, pippo);
+
+    scl_pippo * nuovo_pippo = scl_pippo_create_node(555.666);
+    ...
+
+In questo esempio, un nuovo nodo della lista nuovo_pippo viene
+allocato dinamicamente in memoria, e il suo dato è
+inizializzato a 555.666, quest'operazione viene svolta in una
+sola chiamata di scl_name##_create_node(), come gia menzionato
+in precedenza, il prefisso `scl_name##`della funzione varia a 
+seconda del tipo di struttura che si vuole manipolare, ecco
+ulteriori esempi:
+
+    DEFINE_SCL_TYPE(int, myscl);
+    DEFINE_SCL_TYPE(unsigned long, longlist);
+    DEFINE_SCL_TYPE(char, M);
+
+    scl_myscl * prima = scl_myscl_create_node(-4);
+    scl_longlist * seconda = NULL;
+    scl_M * terza = NULL;
+
+    scl_longlist_ncreate(&seconda, 6, 1064);
+    scl_M_ncreate(&terza, 17, 'B');
+
+La funzione scl_name##_ncreate() crea tanti nodi quanti indicati
+nel secondo argomento e li collega, inizializzando i dati al
+valore passato come terzo argomento; essa accetta come primo
+argomento il puntatore al puntatore del primo elemento della
+lista.
+
+( LISTE DI VETTORI )
+--------------------------------------------------------------
+Non si possono definire liste di vettori statici, ma è
+possibile definire liste di puntatori, in questo caso si presti
+particolare attenzione quando uno o più nodi devono essere
+eliminati. Le funzioni che si occupano di questi processi
+sono in grado di riconoscere se il dato è di tipo puntatore,
+e tenteranno di liberare la memoria al momento dell'eliminazione,
+ma non saranno in grado di riconoscere matrici o puntatori di
+puntatori, in questi casi il primo livello di memoria sarà
+liberato, mentre gli altri sottostanti no:
+
+// Effetti della funzione scl_name##_delete_rec() su i dati
+// di un nodo che punta a matrice
+
+     ____nodo_____ FREE
+    |             |     _______________
+    | int ** info ---->|  int * vec[n] | FREE
+    |_____________|    |_______________|
+                        |   |
+                __      |   |    __
+               |  | <---+   +-->|  |
+               |v1|             |v2| NO FREE
+               |__|             |__|
+            NO FREE
+
+
+[ FUNZIONI ]
+==============================================================
+( FUNZIONI FORNITE )
+--------------------------------------------------------------
+scl_name * scl_name##_create_node(type_t )
+unsigned int scl_name##_ncreate(scl_name ** head_ptr, unsigned int n, type_t data)
+size_t scl_name##_len(scl_name ** head)
+void scl_name##_print(scl_name ** head)
+int scl_name##_find(scl_name ** head, type_t value)
+scl_name * scl_name##_get_node(scl_name ** head, unsigned int index)
+type_t * scl_name##_get(scl_name ** head, scl_name ** buffer , unsigned int index)
+
+- Funzioni Ricorsive -
+void scl_name##_pop_rec(scl_name ** head)
+int scl_name##_append_rec(scl_name ** node, type_t data)
+int scl_name##_insertnode_rec(scl_name ** head, scl_name * new, unsigned int index)
+int scl_name##_replacenode_rec(scl_name ** head, scl_name * new, unsigned int index)
+int scl_name##_insert_rec(scl_name ** head, type_t data, unsigned int index)
+int scl_name##_replace_rec(scl_name ** head, type_t data, unsigned int index)
+int scl_name##_delete_rec(scl_name ** head, unsigned int index)
+
+- Funzioni Callback -
+scl_name * scl_name##_create_cb( void (* callback)(scl_name *) )
+unsigned int scl_name##_ncreate_cb(scl_name ** head_ptr, unsigned int n, void (* callback)(scl_name * ))
+int scl_name##_find_cb(scl_name ** head, type_t value, void (* callback)(scl_name *))
